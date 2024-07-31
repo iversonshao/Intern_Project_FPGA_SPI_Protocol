@@ -15,7 +15,7 @@ module qspi_controller (
     //FIFO
     output reg    [7:0] data_qspi2fifo,
     output reg    write_req,        // write request signal
-    output reg    ready,            // ready signal        
+    // output reg    ready,            // ready signal        
     output reg    read_done         // Read done signal         
 );
 
@@ -142,7 +142,7 @@ module qspi_controller (
                     read_done <= 1'b0;
                     shift_reg <= 8'd0;
                     write_req <= 1'b0;
-                    ready <= 1'b1;
+                    // ready <= 1'b1;
                     data_written <= 1'b0;
                     switch_die_count <= 6'd0;
                     read_count <= 7'd0;
@@ -170,7 +170,7 @@ module qspi_controller (
                                 read_done <= 1'b0;
                                 shift_reg <= 8'd0;
                                 write_req <= 1'b0;
-                                ready <= 1'b1;
+                                // ready <= 1'b1;
                                 data_written <= 1'b0;
                                 switch_die_count <= 6'd0;
                                 read_count <= 7'd0;
@@ -190,13 +190,13 @@ module qspi_controller (
                         SWITCH_DIE:
                             begin
                             // Send C2h command to switch die
-                                ready <= 1'b0;
+                                // ready <= 1'b0;
                                 mosi_out_en <= 1'b1;
                                 if    (cs_n == 1'b1)
                                     begin
                                         cs_n <= 1'b0;
-                                            mosi <= SWITCH_CMD[7];
-                                            switch_die_count <= 6'd0;
+                                        mosi <= SWITCH_CMD[7];
+                                        switch_die_count <= 6'd0;
                                     end
                                 else
                                     begin
@@ -214,7 +214,7 @@ module qspi_controller (
                             end
                         READ:
                             begin
-                                ready <= 1'b0;
+                                // ready <= 1'b0;
                                 mosi_out_en <= 1'b1;
                                 addr <= read_addr;
                                 if    (cs_n == 1'b1)
@@ -287,8 +287,8 @@ module qspi_controller (
                                         begin
                                             if    (send_count < 5'd9)
                                                 begin
-											        				  shift_reg <= {shift_reg[6:0], io1};
-                                                     send_count <= send_count + 5'd1;
+											        shift_reg <= {shift_reg[6:0], io1};
+                                                    send_count <= send_count + 5'd1;
                                                 end
                                             else
                                                 begin
@@ -358,7 +358,7 @@ module qspi_controller (
                             // Complete the transaction
                                 read_done <= 1'b1;
                                 write_req <= 1'b0;
-                                ready <= 1'b1;
+                                // ready <= 1'b1;
                                 data_written <= 1'b0;
                             end
                     endcase

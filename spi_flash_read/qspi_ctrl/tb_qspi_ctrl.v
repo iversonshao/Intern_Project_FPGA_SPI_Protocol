@@ -79,14 +79,14 @@ initial
         $display("Running testbench");
         $display("Standard read operation");
 
-        read_addr = 32'h000000AA;
+        read_addr = 32'h000000BB;
         read_flag = 1;
         switch_die = 0;
         mode = 2'b00;
         expected_fifo_data = 8'b10101010;
         #830;
         io1_dir = 1;
-		  io0_dir = 1;
+        io0_dir = 1;
         @(negedge system_clk) io1_out = 1'b1;
         @(negedge system_clk) io1_out = 1'b0;
         @(negedge system_clk) io1_out = 1'b1;
@@ -95,9 +95,9 @@ initial
         @(negedge system_clk) io1_out = 1'b0;
         @(negedge system_clk) io1_out = 1'b1;
         @(negedge system_clk) io1_out = 1'b0;
-		  
+
         wait (write_req == 1);
-		  io1_dir = 0;
+        io1_dir = 0;
         io0_dir = 0;
         if    (data_qspi2fifo == expected_fifo_data)
             begin
@@ -110,15 +110,15 @@ initial
         wait (read_done == 1);
         $display("standard read operation done");
         
-        #50;		  
+        #50;    
         $display("Dual read operation");
         read_addr = 32'h000000AA;
         read_flag = 1;
         switch_die = 0;
         mode = 2'b01;
         expected_fifo_data = 8'b10101010;
-		  #160;
-        #810;
+        
+        #970;
         io0_dir = 1;
         io1_dir = 1;
         @(negedge system_clk) 
@@ -155,15 +155,14 @@ initial
         wait (read_done == 1);
         $display("dual read operation done");
 
-		  #50;
+        #50;
         $display("Quad read operation");
         read_addr = 32'h000000AA;
         read_flag = 1;
         switch_die = 0;
         mode = 2'b10;
         expected_fifo_data = 8'b10101010;
-		  #160;
-        #810;
+        #970;
         io0_dir = 1;
         io1_dir = 1;
         io2_dir = 1;
@@ -183,7 +182,7 @@ initial
                 io0_out = 1'b0;
             end
         wait (write_req == 1);
-		  io0_dir = 0;
+        io0_dir = 0;
         io1_dir = 0;
         io2_dir = 0;
         io3_dir = 0;
@@ -198,7 +197,7 @@ initial
         wait (read_done == 1);
         $display("quad read operation done");
         
-		  switch_die = 1;
+        switch_die = 1;
         #50;
         $display("Switching die operation and read operation");
         read_addr = 32'h000000BB;
@@ -206,10 +205,8 @@ initial
 
         mode = 2'b00;
         expected_fifo_data = 8'b10101010;
-        #160; //8 * 20ns  for switch die operation
-        #160;
-        #830;
-		io0_dir = 1;
+        #1130; //8 * 20ns  for switch die operation
+        io0_dir = 1;
         io1_dir = 1;
         @(negedge system_clk) io1_out = 1'b1;
         @(negedge system_clk) io1_out = 1'b0;
@@ -222,8 +219,8 @@ initial
 
 
         wait (write_req == 1);
-		  io1_dir = 0;
-		  io0_dir = 0;
+        io1_dir = 0;
+        io0_dir = 0;
         if    (data_qspi2fifo == expected_fifo_data)
             begin
                 $display("Data written to FIFO buffer is correct: %b", data_qspi2fifo);

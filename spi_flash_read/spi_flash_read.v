@@ -11,7 +11,9 @@ module spi_flash_read(
     inout wire    sfr2qspi_io1,    // SPI flash read data I/O 1
     inout wire    sfr2qspi_io2,    // SPI flash read data I/O 2
     inout wire    sfr2qspi_io3,    // SPI flash read data I/O 3
-    output reg    read_finish          // Read finish signal output     
+    output reg    read_finish,          // Read finish signal output
+    output wire    spi_clk,
+    output wire    spi_cs_n
 );
 
 localparam IDLE = 3'd0, 
@@ -28,18 +30,15 @@ reg    [31:0] end_point;     // End point register (32 bits)
 wire    qspi2spi_flash_read_done;    // SPI flash read done signal
 reg    sw;                    // Switch die signal
 wire    read_flag;            // Start read signal
-reg    [2:0] mode2qspi_ctrl;        // Mode signal
-
-
+reg    [1:0] mode2qspi_ctrl;        // Mode signal
 //qspi_ctrl <-> fifo_buffer
 wire    write_req2fifo;              // Write request signal
 wire    [7:0] qspictrl_data2fifo;     // FIFO data input (8 bits)
 
 wire    [7:0] fifo_output;    // FIFO data output (8 bits)
-
 wire    empty, full;          // FIFO empty and full signals
 
-reg     read_done_once;
+reg    read_done_once;
 
 qspi_controller qspi_ctrl4read (
     .system_clk(system_clk),
@@ -49,7 +48,7 @@ qspi_controller qspi_ctrl4read (
     .switch_die(sw),
     .mode(mode2qspi_ctrl),
     .spi_clk(spi_clk),
-    .cs_n(cs_n),
+    .spi_cs_n(spi_cs_n),
     .io0(sfr2qspi_io0),
     .io1(sfr2qspi_io1),
     .io2(sfr2qspi_io2),
@@ -97,7 +96,7 @@ always @(*)
                 end
             CHECK_SWITCH:
                 begin
-                    if    (curr_addr > 32'h01FFFFFF && switch_die_need)
+                    if    (curr_addr > 32'h01FFFFFF)
                         begin
                             next_state = CHECK_SWITCH;
                         end
@@ -112,9 +111,16 @@ always @(*)
                         begin
                             next_state = DONE;
                         end
-                    else if    (curr_addr > 32'h01FFFFFF && switch_die_need)
+                    else if    (curr_addr > 32'h01FFFFFF)
                         begin
-                            next_state = CHECK_SWITCH;
+                            if    (switch_die_need)
+                                begin
+                                    next_state = CHECK_SWITCH;
+                                end
+                            else
+                                begin
+                                    next_state = READ_DATA;
+                                end
                         end
                     else if    (!full)
                         begin
@@ -141,11 +147,11 @@ always @(posedge system_clk or negedge system_reset_n)
         if (!system_reset_n)
             begin
                 read_finish <= 1'b0;
-                curr_addr <= 32'd0;
-                end_point <= 32'd0;
-                sw <= 1'b0;
+                curr_addr <= 32'h00000000;
+                end_point <= 32'h00000000;
                 mode2qspi_ctrl <= 2'b00;
                 read_done_once <= 1'b0;
+                sw <= 1'b0;
             end
         else
             begin
@@ -155,8 +161,8 @@ always @(posedge system_clk or negedge system_reset_n)
                             read_finish <= 1'b0;
                             curr_addr <= start_addr;
                             end_point <= end_addr;
-                            sw <= 1'b0;
                             read_done_once <= 1'b0;
+                            sw <= 1'b0;
                         end
                     CHECK_MODE:
                         begin
@@ -164,11 +170,11 @@ always @(posedge system_clk or negedge system_reset_n)
                         end
                     CHECK_SWITCH:
                         begin
-                            if   (curr_addr > 32'h01FFFFFF && switch_die_need)
+                            if  (curr_addr > 32'h01FFFFFF)
                                 begin
                                     curr_addr <= 32'h00000000;
                                     end_point <= end_point - 32'h01FFFFFF;
-                                    sw <= 1'b1;
+                                    sw <= switch_die_need;
                                 end
                             else
                                 begin

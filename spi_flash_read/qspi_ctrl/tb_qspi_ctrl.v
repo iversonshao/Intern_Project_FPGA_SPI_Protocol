@@ -9,7 +9,7 @@ reg    switch_die;
 reg    system_clk;
 reg    system_reset_n;
 // wires                                               
-wire    cs_n;
+wire    spi_cs_n;
 wire    [7:0] data_qspi2fifo;
 
 wire    io0, io1, io2, io3;
@@ -17,7 +17,6 @@ reg    io0_dir, io1_dir, io2_dir, io3_dir;
 reg    io0_out, io1_out, io2_out, io3_out;
 
 wire    read_done;
-wire    ready;
 wire    spi_clk;
 wire    write_req;
 reg    [7:0] expected_fifo_data;
@@ -32,7 +31,7 @@ assign io3 = io3_dir ? io3_out : 1'bz;
 // assign statements (if any)                          
 qspi_controller uut (
 // port map - connection between master ports and signals/registers   
-    .cs_n(cs_n),
+    .spi_cs_n(spi_cs_n),
     .data_qspi2fifo(data_qspi2fifo),
     .io0(io0),
     .io1(io1),
@@ -42,7 +41,6 @@ qspi_controller uut (
     .read_addr(read_addr),
     .read_done(read_done),
     .read_flag(read_flag),
-    .ready(ready),
     .spi_clk(spi_clk),
     .switch_die(switch_die),
     .system_clk(system_clk),
@@ -205,7 +203,7 @@ initial
 
         mode = 2'b00;
         expected_fifo_data = 8'b10101010;
-        #1130; //8 * 20ns  for switch die operation
+        #1150; //8 * 20ns  for switch die operation
         io0_dir = 1;
         io1_dir = 1;
         @(negedge system_clk) io1_out = 1'b1;

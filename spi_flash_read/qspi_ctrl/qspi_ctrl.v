@@ -6,8 +6,8 @@ module qspi_controller (
     input wire    switch_die,            // switch die signal input
     input wire    [1:0] mode,            // mode signal input
 
-    output    spi_clk,          // SPI clock output         
-    output reg    cs_n,             // SPI chip select (active low)             
+    output wire    spi_clk,          // SPI clock output         
+    output wire    spi_cs_n,             // SPI chip select (active low)             
     inout    io0,//d0 mosi
     inout    io1,//d1 miso
     inout    io2,
@@ -15,7 +15,7 @@ module qspi_controller (
     //FIFO
     output reg    [7:0] data_qspi2fifo,
     output reg    write_req,        // write request signal
-    // output reg    ready,            // ready signal        
+    //output reg    ready,            // ready signal        
     output reg    read_done         // Read done signal         
 );
 
@@ -48,9 +48,10 @@ module qspi_controller (
     reg    miso_out_en;
     reg    qspi_io2_out_en;
     reg    qspi_io3_out_en;
-
+    reg    cs_n;
     // clock divider
     assign spi_clk = system_reset_n ? system_clk : 0;
+    assign spi_cs_n = cs_n;
     
     //IO way ctrl
     assign io0 = mosi_out_en ? mosi : 1'bZ;
@@ -287,7 +288,7 @@ module qspi_controller (
                                         begin
                                             if    (send_count < 5'd9)
                                                 begin
-											        shift_reg <= {shift_reg[6:0], io1};
+                                                    shift_reg <= {shift_reg[6:0], io1};
                                                     send_count <= send_count + 5'd1;
                                                 end
                                             else

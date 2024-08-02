@@ -353,6 +353,10 @@ module qspi_controller (
                                     begin
                                         data_written <= 1'b1;
                                     end
+                                else
+                                    begin
+                                        data_written <= 1'b0;
+                                    end
                             end
                         COMPLETE:
                             begin

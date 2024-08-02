@@ -22,6 +22,7 @@ assign sfr2qspi_io1 = io1_dir ? io1_out : 1'bz;
 assign sfr2qspi_io2 = io2_dir ? io2_out : 1'bz;
 assign sfr2qspi_io3 = io3_dir ? io3_out : 1'bz;
 integer   i;
+
 // assign statements (if any)                          
 spi_flash_read uut (
 // port map - connection between master ports and signals/registers   
@@ -62,7 +63,6 @@ initial
         io2_out = 0;
         io3_out = 0;
 
-
         #100;
         system_reset_n = 1;
         
@@ -72,10 +72,9 @@ initial
         end_addr = 32'h00000010;
         mode = 2'b00;
         start_flag = 1;
-
-        for (i = 0; i < 17; i = i + 1)
+        for (i = 0; i < 11; i = i + 1)
             begin
-                #850;
+                #870;
                 io1_dir = 1;
                 io0_dir = 1;
                 @ (negedge system_clk) io1_out = 1;
@@ -101,9 +100,9 @@ initial
         end_addr = 32'h00001010;
         mode = 2'b01;
         start_flag = 1;
-        for (i = 0; i < 17; i = i + 1)
+        for (i = 0; i < 11; i = i + 1)
             begin
-                #970;
+                #990;
                 io1_dir = 1;
                 io0_dir = 1;
                 @ (negedge system_clk) 
@@ -190,7 +189,7 @@ initial
                     end
                 else
                     begin
-                        #850;
+                        #830;
                         io1_dir = 1;
                         io0_dir = 1;
                         @ (negedge system_clk) io1_out = 1;
@@ -217,44 +216,23 @@ initial
         mode = 2'b00;
         switch_die_need = 1;
         start_flag = 1;
-        for (i = 0; i < 33; i = i + 1)
+        for (i = 0; i < 17; i = i + 1)
             begin
-                if    (i == 17)
-                    begin
-                        #1130;
-                        io1_dir = 1;
-                        io0_dir = 1;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;                
-                        wait(uut.qspi_ctrl4read.write_req == 1);
-                        io0_dir = 0;
-                        io1_dir = 0;
-                        wait(uut.qspi_ctrl4read.read_done == 1);
-                    end
-                else
-                    begin
-                        #850;
-                        io1_dir = 1;
-                        io0_dir = 1;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;
-                        @ (negedge system_clk) io1_out = 1;
-                        @ (negedge system_clk) io1_out = 0;                
-                        wait(uut.qspi_ctrl4read.write_req == 1);
-                        io0_dir = 0;
-                        io1_dir = 0;
-                        wait(uut.qspi_ctrl4read.read_done == 1);
-                    end
+                #1130;
+                io1_dir = 1;
+                io0_dir = 1;
+                @ (negedge system_clk) io1_out = 1;
+                @ (negedge system_clk) io1_out = 0;
+                @ (negedge system_clk) io1_out = 1;
+                @ (negedge system_clk) io1_out = 0;
+                @ (negedge system_clk) io1_out = 1;
+                @ (negedge system_clk) io1_out = 0;
+                @ (negedge system_clk) io1_out = 1;
+                @ (negedge system_clk) io1_out = 0;                
+                wait(uut.qspi_ctrl4read.write_req == 1);
+                io0_dir = 0;
+                io1_dir = 0;
+                wait(uut.qspi_ctrl4read.read_done == 1);
             end
         wait(read_finish);
         start_flag = 0;

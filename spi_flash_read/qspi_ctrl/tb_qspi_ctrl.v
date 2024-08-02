@@ -115,8 +115,8 @@ initial
         switch_die = 0;
         mode = 2'b01;
         expected_fifo_data = 8'b10101010;
-        
-        #970;
+        #160;
+        #810;
         io0_dir = 1;
         io1_dir = 1;
         @(negedge system_clk) 
@@ -160,7 +160,8 @@ initial
         switch_die = 0;
         mode = 2'b10;
         expected_fifo_data = 8'b10101010;
-        #970;
+        #160;
+        #810;
         io0_dir = 1;
         io1_dir = 1;
         io2_dir = 1;
@@ -203,7 +204,9 @@ initial
 
         mode = 2'b00;
         expected_fifo_data = 8'b10101010;
-        #1150; //8 * 20ns  for switch die operation
+        #160; //8 * 20ns  for switch die operation
+        #160;
+        #830;
         io0_dir = 1;
         io1_dir = 1;
         @(negedge system_clk) io1_out = 1'b1;

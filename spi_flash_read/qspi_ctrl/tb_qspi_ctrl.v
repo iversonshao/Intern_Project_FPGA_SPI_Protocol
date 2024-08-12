@@ -1,239 +1,252 @@
 `timescale 1 ns/ 1 ns
 module qspi_controller_vlg_tst();
-// constants
-// test vector input registers
-reg    [1:0] mode;
-reg    [31:0] read_addr;
-reg    read_flag;
-reg    switch_die;
+
+// Constants
+parameter CLK_PERIOD = 20; // 50MHz clock
+
+// Test vector input registers
 reg    system_clk;
 reg    system_reset_n;
-// wires                                               
-wire    spi_cs_n;
-wire    [7:0] data_qspi2fifo;
+reg    [1:0] mode;
+reg    [31:0] read_addr;
+reg    [15:0] total_data_num;
+reg    key;
+reg    switch_die;
 
-wire    io0, io1, io2, io3;
-reg    io0_dir, io1_dir, io2_dir, io3_dir;
-reg    io0_out, io1_out, io2_out, io3_out;
-
-wire    read_done;
+// Wires
 wire    spi_clk;
-wire    write_req;
-reg    [7:0] expected_fifo_data;
+wire    cs_n;
+wire    [7:0] qspidata2spi_read;
+wire    read_done;
 
-// Bidirectional port assignments
-assign io0 = io0_dir ? io0_out : 1'bz;
-assign io1 = io1_dir ? io1_out : 1'bz;
-assign io2 = io2_dir ? io2_out : 1'bz;
-assign io3 = io3_dir ? io3_out : 1'bz;
+// Bidirectional IOs
+wire    io0, io1, io2, io3;
+reg    io0_reg, io1_reg, io2_reg, io3_reg;
+reg    io0_oe, io1_oe, io2_oe, io3_oe;
 
+assign io0 = io0_oe ? io0_reg : 1'bz;
+assign io1 = io1_oe ? io1_reg : 1'bz;
+assign io2 = io2_oe ? io2_reg : 1'bz;
+assign io3 = io3_oe ? io3_reg : 1'bz;
 
-// assign statements (if any)                          
+// Instantiate the Unit Under Test (UUT)
 qspi_controller uut (
-// port map - connection between master ports and signals/registers   
-    .spi_cs_n(spi_cs_n),
-    .data_qspi2fifo(data_qspi2fifo),
+    .system_clk(system_clk),
+    .system_reset_n(system_reset_n),
+    .key(key),
+    .addr(read_addr),
+    .total_data_num(total_data_num),
+    .switch_die(switch_die),
+    .mode(mode),
+    .spi_clk(spi_clk),
+    .cs_n(cs_n),
     .io0(io0),
     .io1(io1),
     .io2(io2),
     .io3(io3),
-    .mode(mode),
-    .read_addr(read_addr),
-    .read_done(read_done),
-    .read_flag(read_flag),
-    .spi_clk(spi_clk),
-    .switch_die(switch_die),
-    .system_clk(system_clk),
-    .system_reset_n(system_reset_n),
-    .write_req(write_req)
+    .qspidata2spi_read(qspidata2spi_read),
+    .read_done(read_done)
 );
 
-//generate clock
-always #10 system_clk = ~system_clk;
 
-initial
-    begin
-        // code that executes only once
-        system_clk = 0;
-        system_reset_n = 0;
-        switch_die = 0;
-        read_flag = 0;
-        mode = 2'b00;
-        read_addr = 32'h00000000;
-        io0_dir = 0;
-        io1_dir = 0;
-        io2_dir = 0;
-        io3_dir = 0;
-        io0_out = 0;
-        io1_out = 0;
-        io2_out = 0;
-        io3_out = 0;
-        expected_fifo_data = 8'h00;
+// Clock generation
+always begin
+    #(CLK_PERIOD/2) system_clk = ~system_clk;
+end
 
-        #100;
-        system_reset_n = 1;
+// Test procedure
+initial begin
+    // Initialize inputs
+    system_clk = 0;
+    system_reset_n = 0;
+    key = 0;
+    read_addr = 32'h00000000;
+    total_data_num = 16'd12;  
+    switch_die = 0;
+    mode = 2'b00;
+    io0_oe = 0;
+    io1_oe = 0;
+    io2_oe = 0;
+    io3_oe = 0;
+    io0_reg = 0;
+    io1_reg = 0;
+    io2_reg = 0;
+    io3_reg = 0;
+    // Reset
+    #100 system_reset_n = 1;
+    #100;
+    $display("Running testbench");
+    // Test Case 1: Standard Read Mode
+    $display("Test Case 1: Standard Read Mode");
+    mode = 2'b00;
+    read_addr = 32'h000000BB;
+    switch_die = 0;
+    key = 1;
+    #20 key = 0;
+    #3210;
+    io0_oe = 0;
+    io1_oe = 1;
+    repeat(12)
+        begin
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+        end
 
-        #50;
-        $display("Running testbench");
-        $display("Standard read operation");
+    wait (read_done == 1)
+    io0_oe = 0;
+    io1_oe = 0;
+    system_reset_n = 0;
+    #100 system_reset_n = 1;
+    #100;
+    // Test Case 2: Dual Read Mode
+    $display("Test Case 2: Dual Read Mode");
+    mode = 2'b01;
+    read_addr = 32'h000000CC;
+    switch_die = 0;
+    key = 1;
+    #20 key = 0;
+    #3820;
+    io0_oe = 1;
+    io1_oe = 1;
+    repeat(12)
+        begin
+            @(negedge spi_clk) 
+                begin
+                    io1_reg = 1'b1;
+                    io0_reg = 1'b1;
+                end
+            @(negedge spi_clk) 
+                begin
+                    io1_reg = 1'b1;
+                    io0_reg = 1'b0;
+                end
+            @(negedge spi_clk) 
+                begin
+                    io1_reg = 1'b1;
+                    io0_reg = 1'b1;
+                end
+            @(negedge spi_clk) 
+                begin
+                    io1_reg = 1'b1;
+                    io0_reg = 1'b0;
+                end
+        end
 
-        read_addr = 32'h000000BB;
-        read_flag = 1;
-        switch_die = 0;
-        mode = 2'b00;
-        expected_fifo_data = 8'b10101010;
-        #830;
-        io1_dir = 1;
-        io0_dir = 1;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
+    wait (read_done == 1)
+    io0_oe = 0;
+    io1_oe = 0;
+    system_reset_n = 0;
+    
+    #100 system_reset_n = 1;
+    #100
+    // Test Case 3: Quad Read Mode
+    $display("Test Case 3: Quad Read Mode");
+    mode = 2'b10;
+    read_addr = 32'h000000DD;
+    switch_die = 0;
+    key = 1;
+    #20 key = 0;
+    #3820;
+    io0_oe = 1;
+    io1_oe = 1;
+    io2_oe = 1;
+    io3_oe = 1;
+    repeat(12)
+        begin
+            @(negedge spi_clk) 
+                begin
+                    io3_reg = 1'b1;
+                    io2_reg = 1'b0;
+                    io1_reg = 1'b1;
+                    io0_reg = 1'b1;
+                end
+            @(negedge spi_clk) 
+                begin
+                    io3_reg = 1'b1;
+                    io2_reg = 1'b1;
+                    io1_reg = 1'b0;
+                    io0_reg = 1'b1;
+                end
+        end
 
-        wait (write_req == 1);
-        io1_dir = 0;
-        io0_dir = 0;
-        if    (data_qspi2fifo == expected_fifo_data)
-            begin
-                $display("Data written to FIFO buffer is correct: %b", data_qspi2fifo);
-            end
-        else
-            begin
-                $display("FIFO DATA ERROR!! Expected: %b, Got: %b", expected_fifo_data, data_qspi2fifo);
-            end
-        wait (read_done == 1);
-        $display("standard read operation done");
-        
-        #50;    
-        $display("Dual read operation");
-        read_addr = 32'h000000AA;
-        read_flag = 1;
-        switch_die = 0;
-        mode = 2'b01;
-        expected_fifo_data = 8'b10101010;
-        #160;
-        #810;
-        io0_dir = 1;
-        io1_dir = 1;
-        @(negedge system_clk) 
-            begin
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        @(negedge system_clk) 
-            begin
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        @(negedge system_clk) 
-            begin
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        @(negedge system_clk) 
-            begin
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        wait (write_req == 1);
-        io0_dir = 0;
-        io1_dir = 0;
-        if    (data_qspi2fifo == expected_fifo_data)
-            begin
-                $display("Data written to FIFO buffer is correct: %b", data_qspi2fifo);
-            end
-        else
-            begin
-                $display("FIFO DATA ERROR!! Expected: %b, Got: %b", expected_fifo_data, data_qspi2fifo);
-            end
-        wait (read_done == 1);
-        $display("dual read operation done");
+    wait (read_done == 1)
+    io0_oe = 0;
+    io1_oe = 0;
+    io2_oe = 0;
+    io3_oe = 0;
+    system_reset_n = 0;
 
-        #50;
-        $display("Quad read operation");
-        read_addr = 32'h000000AA;
-        read_flag = 1;
-        switch_die = 0;
-        mode = 2'b10;
-        expected_fifo_data = 8'b10101010;
-        #160;
-        #810;
-        io0_dir = 1;
-        io1_dir = 1;
-        io2_dir = 1;
-        io3_dir = 1;
-        @(negedge system_clk)
-            begin
-                io3_out = 1'b1;
-                io2_out = 1'b0;
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        @(negedge system_clk)
-            begin
-                io3_out = 1'b1;
-                io2_out = 1'b0;
-                io1_out = 1'b1;
-                io0_out = 1'b0;
-            end
-        wait (write_req == 1);
-        io0_dir = 0;
-        io1_dir = 0;
-        io2_dir = 0;
-        io3_dir = 0;
-        if    (data_qspi2fifo == expected_fifo_data)
-            begin
-                $display("Data written to FIFO buffer is correct: %b", data_qspi2fifo);
-            end
-        else
-            begin
-                $display("FIFO DATA ERROR!! Expected: %b, Got: %b", expected_fifo_data, data_qspi2fifo);
-            end
-        wait (read_done == 1);
-        $display("quad read operation done");
-        
-        switch_die = 1;
-        #50;
-        $display("Switching die operation and read operation");
-        read_addr = 32'h000000BB;
-        read_flag = 1;
+    #100 system_reset_n = 1;
+    #100
+    $display("Test Case 4: Switch die Mode");
+    mode = 2'b00;
+    read_addr = 32'h01FFFFFA;
+    total_data_num = 16'd6;
+    switch_die = 0;
+    key = 1;
+    #20 key = 0;
+    #3210;
+    io0_oe = 0;
+    io1_oe = 1;    
+    repeat(6)
+        begin
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+        end
+    wait (read_done == 1)
+    io0_oe = 0;
+    io1_oe = 0;
+    system_reset_n = 0;
 
-        mode = 2'b00;
-        expected_fifo_data = 8'b10101010;
-        #160; //8 * 20ns  for switch die operation
-        #160;
-        #830;
-        io0_dir = 1;
-        io1_dir = 1;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
-        @(negedge system_clk) io1_out = 1'b1;
-        @(negedge system_clk) io1_out = 1'b0;
+    #20 system_reset_n = 1;
+    switch_die = 1;
+    key = 1;
+    #20 key = 0;
+    #1310
+    system_reset_n = 0;
 
+    #100 system_reset_n = 1;
+    #100
+    read_addr = 32'h00000000;
+    total_data_num = 16'd3;
+    mode = 2'b00;
+    switch_die = 0;
+    key = 1;
+    #20 key = 0;
 
-        wait (write_req == 1);
-        io1_dir = 0;
-        io0_dir = 0;
-        if    (data_qspi2fifo == expected_fifo_data)
-            begin
-                $display("Data written to FIFO buffer is correct: %b", data_qspi2fifo);
-            end
-        else
-            begin
-                $display("FIFO DATA ERROR!! Expected: %b, Got: %b", expected_fifo_data, data_qspi2fifo);
-            end
-        wait (read_done == 1);
-        $display("switch die operation done");
+    #3210;
+    io0_oe = 0;
+    io1_oe = 1;
+    repeat(3)
+        begin
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+            @(negedge spi_clk) io1_reg = 1'b1;
+            @(negedge spi_clk) io1_reg = 1'b0;
+        end
 
-        #100 $stop;
-        $display("Testbench done");
-    end
+    wait (read_done == 1)
+    io0_oe = 0;
+    io1_oe = 0;
+    system_reset_n = 0;
+
+    $display("All test cases completed");
+    #1000 $stop;
+end
 endmodule

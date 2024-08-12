@@ -41,11 +41,13 @@ module pll (
     areset,
     inclk0,
     c0,
+    c1,
     locked);
 
     input    areset;
     input    inclk0;
     output    c0;
+    output    c1;
     output    locked;
 `ifndef ALTERA_RESERVED_QIS
 // synopsys translate_off
@@ -57,18 +59,20 @@ module pll (
 
     wire    [0:0] sub_wire2 = 1'h0;
     wire    [4:0] sub_wire3;
-    wire    sub_wire5;
+    wire    sub_wire6;
     wire    sub_wire0 = inclk0;
     wire    [1:0] sub_wire1 = {sub_wire2, sub_wire0};
+    wire    [1:0] sub_wire5 = sub_wire3[1:1];
     wire    [0:0] sub_wire4 = sub_wire3[0:0];
     wire    c0 = sub_wire4;
-    wire    locked = sub_wire5;
+    wire    c1 = sub_wire5;
+    wire    locked = sub_wire6;
 
     altpll altpll_component (
                 .areset (areset),
                 .inclk (sub_wire1),
                 .clk (sub_wire3),
-                .locked (sub_wire5),
+                .locked (sub_wire6),
                 .activeclock (),
                 .clkbad (),
                 .clkena ({6{1'b1}}),
@@ -108,6 +112,10 @@ module pll (
         altpll_component.clk0_duty_cycle = 50,
         altpll_component.clk0_multiply_by = 2,
         altpll_component.clk0_phase_shift = "0",
+        altpll_component.clk1_divide_by = 1,
+        altpll_component.clk1_duty_cycle = 50,
+        altpll_component.clk1_multiply_by = 8,
+        altpll_component.clk1_phase_shift = "0",
         altpll_component.compensate_clock = "CLK0",
         altpll_component.inclk0_input_frequency = 40000,
         altpll_component.intended_device_family = "MAX 10",

@@ -6,7 +6,7 @@ module top_read (
     // input wire    [31:0] end_addr,
     // input wire    [1:0] mode,
     input wire    read_req,
-    input wire    switch_die_need,
+    //input wire    switch_die_need,
     output wire    busy, //spi bus is occupied
     output wire    completed, //spi rom image copy is completed
     inout wire    sfr2qspi_io0,    // SPI flash read data I/O 0
@@ -17,23 +17,28 @@ module top_read (
     output wire    spi_cs_n,
     output wire    BMC_SEL,
     output wire    PCH_SEL,
-    output wire    c1
+    output wire    clk100
 );
+
+wire    system_clk;
+wire    system_reset_n;
+wire    read_finish;
+wire    start_flag_reg;
 wire    start_flag;
 
 pll p1 (
  .areset(!PWRGD_P1V2_MAX10_AUX_PLD_R),
  .inclk0(CLK_25M_CKMNG_MAIN_PLD),
- .c0(c0),
- .c1(c1),
- .locked(locked)
+ .c0(system_clk),
+ .c1(clk100),
+ .locked(system_reset_n)
 );
 
 key_filter #(
-    .CNT_MAX (CNT_MAX)
+    .CNT_MAX (20'd999_999)
 ) k1 (
-    .system_clk(c0),
-    .system_reset_n(locked),
+    .system_clk(system_clk),
+    .system_reset_n(system_reset_n),
     .key_in(start_but),
     .key_flag(start_flag)
 );
@@ -45,9 +50,9 @@ spi_flash_read s1 (
     .switch_die_need(1'b0),
     .read_finish(read_finish),
     .spi_read_req(1'b1),
-    .start_flag(start_flag),
-    .system_clk(c0),
-    .system_reset_n(locked),
+    .start_flag(start_flag_reg),
+    .system_clk(system_clk),
+    .system_reset_n(system_reset_n),
     .sfr2qspi_io0(sfr2qspi_io0),
     .sfr2qspi_io1(sfr2qspi_io1),
     .sfr2qspi_io2(sfr2qspi_io2),
@@ -58,6 +63,28 @@ spi_flash_read s1 (
 );
 //mode 00 = standard 01 = dual 10 = quad
 
+always @ (posedge system_clk or negedge system_reset_n)
+    begin
+        if (!system_reset_n)
+            begin
+                start_flag_reg <= 1'b0;
+            end
+        else
+            begin
+                if    (start_flag)
+                    begin
+                        start_flag_reg <= 1'b1;
+                    end
+                else if    (read_finish)
+                    begin
+                        start_flag_reg <= 1'b0;
+                    end
+                else
+                    begin
+                        start_flag_reg <= start_flag_reg;
+                    end
+            end
+    end
 assign BMC_SEL = 1'b1;
 assign PCH_SEL = 1'b1;
 

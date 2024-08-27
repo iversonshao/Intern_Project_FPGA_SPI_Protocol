@@ -229,17 +229,35 @@ always @(*)
                 end
             PP_WAIT:
                 begin
-                    if    (pp_num_reg >= write_num - 16'd256)
+                    if    (mode == 0)
                         begin
-                            next_state = FINISH;
+                            if    (pp_num_reg >= write_num - 16'd256)
+                                begin
+                                    next_state = FINISH;
+                                end
+                            else if    (pp_count == 4'd15)
+                                begin
+                                    next_state = SE;
+                                end
+                            else
+                                begin
+                                    next_state = PP;
+                                end
                         end
-                    else if    (pp_count == 4'd15)
+                    else if    (mode == 1)
                         begin
-                            next_state = SE;
-                        end
-                    else
-                        begin
-                            next_state = PP;
+                            if    (pp_num_reg >= write_num - 16'd64)
+                                begin
+                                    next_state = FINISH;
+                                end
+                            else if    (pp_count == 4'd15)
+                                begin
+                                    next_state = SE;
+                                end
+                            else
+                                begin
+                                    next_state = PP;
+                                end
                         end
                 end
             FINISH:
@@ -330,7 +348,7 @@ always @(posedge system_clk or negedge system_reset_n)
                                     if    (pp_count == 4'd15)
                                         begin
                                             se_key <= 1'b1;
-                                        end
+                                        end 
                                     else if    (pp_num_reg >= write_num - 16'd256)
                                         begin
                                             pp_key <= 1'b0;

@@ -3,7 +3,7 @@ module spi_flash_write_vlg_tst();
 
 
 parameter CLK_PERIOD = 20;
-parameter ROM = 8192;
+
 reg    pi_flag;
 reg    system_clk;
 reg    system_reset_n;
@@ -23,25 +23,27 @@ wire    spi_clk;
 wire    write_finish;
 
 
+
+
 // assign statements (if any)                          
 spi_flash_write uut (
 // port map - connection between master ports and signals/registers   
- .cs_n(cs_n),
- .io0(io0),
- .io1(io1),
- .io2(io2),
- .io3(io3),
- .mode(mode),
- .pi_flag(pi_flag),
- .pp_done(pp_done),
- .se_done(se_done),
- .spi_clk(spi_clk),
- .system_clk(system_clk),
- .system_reset_n(system_reset_n),
- .write_data(write_data),
- .write_finish(write_finish),
- .write_num(write_num),
- .write_start_addr(write_start_addr)
+    .cs_n(cs_n),
+    .io0(io0),
+    .io1(io1),
+    .io2(io2),
+    .io3(io3),
+    .mode(mode),
+    .pi_flag(pi_flag),
+    .pp_done(pp_done),
+    .se_done(se_done),
+    .spi_clk(spi_clk),
+    .system_clk(system_clk),
+    .system_reset_n(system_reset_n),
+    .write_data(write_data),
+    .write_finish(write_finish),
+    .write_num(write_num),
+    .write_start_addr(write_start_addr)
 );
 
 integer i;
@@ -101,8 +103,8 @@ initial
         #1000;
 
         #200 system_reset_n = 1;
-        //case3:write 2KB in PPX4 mode (need 1se)
         #200;
+        //case3:write 2KB in PPX4 mode (need 1se)
         write_start_addr = 32'h0000_2000;
         write_num = 16'd2048;
         pi_flag = 1;
@@ -116,7 +118,6 @@ initial
             end
         wait(write_finish);
         system_reset_n = 0;
-
         #10000;
         $finish;
 
@@ -137,18 +138,17 @@ always @(posedge system_clk)
                 $display("Write finish at time %t", $time);
             end
     end
+// real    tse_time;
+// always @(posedge se_done)
+//     begin
+//         tse_time = $realtime;
+//     end
 
-real    tse_time;
-always @(posedge se_done)
-    begin
-        tse_time = $realtime;
-    end
-
-always @(posedge pp_done)
-    begin
-        if    ($realtime - tse_time < 60)
-            begin
-                $display("Warning: TSE time not respected. Time since last SE: %0t", $realtime - tse_time);
-            end
-    end
+// always @(posedge pp_done)
+//     begin
+//         if    ($realtime - tse_time < 60)
+//             begin
+//                 $display("Warning: TSE time not respected. Time since last SE: %0t", $realtime - tse_time);
+//             end
+//     end
 endmodule

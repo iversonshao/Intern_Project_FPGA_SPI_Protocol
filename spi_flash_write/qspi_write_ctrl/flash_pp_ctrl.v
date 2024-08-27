@@ -45,7 +45,8 @@ reg    miso_en;
 reg    qspi_io2_en;
 reg    qspi_io3_en;
 
-wire    [8:0] pp4x_num;
+wire    pp4x_num;
+
 assign io0 = mosi_en? mosi : 1'bz;
 assign io1 = miso_en? miso : 1'bz;
 assign io2 = qspi_io2_en? qspi_io2 : 1'bz;
@@ -107,13 +108,16 @@ always @(posedge system_clk or negedge system_reset_n)
             begin
                 spi_clk_cnt <= spi_clk_cnt + 1'b1;
             end
-        else if    ((state == PP) && (byte_cnt >= 9'd5) && (byte_cnt < pp_num + 9'd11 - 1'b1) && (mode == 0))
+        else if    (state == PP)
             begin
-                spi_clk_cnt <= spi_clk_cnt + 1'b1;
-            end
-        else if    ((state == PP) && (byte_cnt >= 9'd5) && (byte_cnt < pp4x_num + 9'd8 - 1'b1) && (mode == 1))
-            begin
-                spi_clk_cnt <= spi_clk_cnt + 1'b1;
+                if    ((mode == 0) && (byte_cnt >= 9'd5) && (byte_cnt < pp_num + 9'd11 - 1'b1))
+                    begin
+                        spi_clk_cnt <= spi_clk_cnt + 1'b1;
+                    end
+                else if    ((mode == 1) && (byte_cnt >= 9'd5) && (byte_cnt < pp4x_num + 9'd8 - 1'b1))
+                    begin
+                        spi_clk_cnt <= spi_clk_cnt + 1'b1;
+                    end
             end
     end
 
@@ -227,11 +231,11 @@ always @(*)
                 end
             PP:
                 begin
-                    if    ((mode == 0) && (byte_cnt == pp_num + 9'd10) && (system_clk_cnt == 5'd31))
+                    if    ((byte_cnt == pp_num + 9'd10) && (system_clk_cnt == 5'd31) && (mode == 0))
                         begin
                             next_state = PPDONE;
                         end
-                    else if    ((mode == 1) && (byte_cnt == pp4x_num + 9'd7) && (system_clk_cnt == 5'd31))
+                    else if    ((byte_cnt == pp4x_num + 9'd7) && (system_clk_cnt == 5'd31) && (mode == 1))
                         begin
                             next_state = PPDONE;
                         end
@@ -276,6 +280,7 @@ always @(posedge system_clk or negedge system_reset_n)
         else if    ((state == WR_EN) && (byte_cnt == 9'd0))
             begin
                 mosi_en <= 1'b1;
+                
             end  
         else if    ((state == WR_EN) && (byte_cnt == 9'd1) && (spi_clk_cnt == 2'd0))
             begin
@@ -354,7 +359,7 @@ always @(posedge system_clk or negedge system_reset_n)
                                 miso_en <= 1'b1;
                                 qspi_io2_en <= 1'b1;
                                 qspi_io3_en <= 1'b1;
-                                if    ((bit_cnt == 0) || (bit_cnt == 2) || (bit_cnt == 4) || (bit_cnt == 6))
+                                if    ((bit_cnt == 0) || (bit_cnt ==2) || (bit_cnt == 4) || (bit_cnt == 6))
                                     begin
                                         mosi <= data[4];
                                         miso <= data[5];
@@ -383,6 +388,7 @@ always @(posedge system_clk or negedge system_reset_n)
                             end
                     end
             end
+
         else if    (state == PPDONE)
             begin
                 pp_done <= 1'b1;

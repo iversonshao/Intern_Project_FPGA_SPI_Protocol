@@ -86,7 +86,7 @@ begin
     #3210;
     io1_dir = 1;
     io0_dir = 0;
-    // read_req = 1;
+
     repeat(12)
         begin 
             @(negedge spi_clk) io1_out = 1'b1;
@@ -103,7 +103,7 @@ begin
     wait (uut.qspi_ctrl4read.read_done);
     io0_dir = 0;
     io1_dir = 0;
-    read_req = 0;
+
     wait(read_finish);
     #100;
     system_reset_n = 0;
@@ -120,7 +120,6 @@ begin
     #3820;
     io1_dir = 1;
     io0_dir = 1;
-    read_req = 1;
     repeat(12)
         begin
             @(negedge spi_clk)
@@ -149,7 +148,6 @@ begin
     wait (uut.qspi_ctrl4read.read_done);
     io0_dir = 0;
     io1_dir = 0;
-    read_req = 0;
     wait(read_finish);
     system_reset_n = 0;
 
@@ -169,7 +167,6 @@ begin
     io1_dir = 1;
     io2_dir = 1;
     io3_dir = 1;
-    read_req = 1;
     repeat(12)
         begin
             @(negedge spi_clk) 
@@ -194,7 +191,6 @@ begin
     io1_dir = 0;
     io2_dir = 0;
     io3_dir = 0;
-    read_req = 0;
     wait(read_finish);
     system_reset_n = 0;
     #100;

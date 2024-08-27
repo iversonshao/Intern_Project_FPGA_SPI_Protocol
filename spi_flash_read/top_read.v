@@ -2,29 +2,40 @@ module top_read (
     input wire    CLK_25M_CKMNG_MAIN_PLD,
     input wire    PWRGD_P1V2_MAX10_AUX_PLD_R,
     input wire    start_but,
-    // input wire    [31:0] start_addr,
-    // input wire    [31:0] end_addr,
-    // input wire    [1:0] mode,
+    input wire    [31:0] start_addr,
+    input wire    [31:0] end_addr,
+    input wire    [1:0] mode,
     input wire    read_req,
-    //input wire    switch_die_need,
-    output wire    busy, //spi bus is occupied
-    output wire    completed, //spi rom image copy is completed
+    input wire    switch_die_need,
+    output reg    busy_n, //spi bus is occupied
+    output reg    completed_n, //spi rom image copy is completed
     inout wire    sfr2qspi_io0,    // SPI flash read data I/O 0
     inout wire    sfr2qspi_io1,    // SPI flash read data I/O 1
     inout wire    sfr2qspi_io2,    // SPI flash read data I/O 2
     inout wire    sfr2qspi_io3,   // SPI flash read data I/O 3
-    output wire    spi_clk,
-    output wire    spi_cs_n,
-    output wire    BMC_SEL,
-    output wire    PCH_SEL,
-    output wire    clk100
+    output wire    romaspi_clk,
+    output wire    romacs_n,
+    output reg    BMC_SEL,
+    output reg    PCH_SEL,
+    output reg    SKT3_OE_CTL,
+	output wire    [7:0] fifo_output
 );
+
+parameter READ_MODE = 2'b00;
+parameter ROM_A_START_ADDR = 32'h00000000;
+parameter ROM_A_END_ADDR = 32'h029B4FF0;
+
+wire    start_signal;
+wire    read_start_signal;
 
 wire    system_clk;
 wire    system_reset_n;
 wire    read_finish;
-wire    start_flag_reg;
-wire    start_flag;
+
+wire    full;
+wire    [31:0] roma_data_num;
+
+
 
 pll p1 (
  .areset(!PWRGD_P1V2_MAX10_AUX_PLD_R),
@@ -34,60 +45,68 @@ pll p1 (
  .locked(system_reset_n)
 );
 
-key_filter #(
-    .CNT_MAX (20'd999_999)
-) k1 (
+key_filter k1(
     .system_clk(system_clk),
-    .system_reset_n(system_reset_n),
     .key_in(start_but),
-    .key_flag(start_flag)
+    .key_flag(start_signal)
 );
 
 spi_flash_read s1 (
-    .start_addr(32'h00000000),
-    .end_addr(32'h029B4FF0),
-    .mode(2'b00),
+    .start_addr(ROM_A_START_ADDR),
+    .end_addr(ROM_A_END_ADDR),
+    .mode(READ_MODE),
     .switch_die_need(1'b0),
     .read_finish(read_finish),
-    .spi_read_req(1'b1),
-    .start_flag(start_flag_reg),
+    .spi_read_req(1'b1), //1'b1;
+    .start_flag(read_start_signal),
     .system_clk(system_clk),
     .system_reset_n(system_reset_n),
     .sfr2qspi_io0(sfr2qspi_io0),
     .sfr2qspi_io1(sfr2qspi_io1),
     .sfr2qspi_io2(sfr2qspi_io2),
     .sfr2qspi_io3(sfr2qspi_io3),
-    .spi_clk(spi_clk),
-    .spi_cs_n(spi_cs_n)
-    
+    .spi_clk(romaspi_clk),
+    .cs_n(romacs_n),
+    .rom_data_num(roma_data_num),
+    .fifo_output(fifo_output),
+    .full(full),
+	.empty(empty)
 );
-//mode 00 = standard 01 = dual 10 = quad
 
-always @ (posedge system_clk or negedge system_reset_n)
+
+assign read_start_signal = start_signal ? 1'b1 : 1'b0;
+
+always @(posedge system_clk or negedge system_reset_n)
     begin
-        if (!system_reset_n)
+        if    (!system_reset_n)
             begin
-                start_flag_reg <= 1'b0;
+                PCH_SEL <= 1'b0;
+                BMC_SEL <= 1'b0;
+                SKT3_OE_CTL <= 1'b0;
+                busy_n <= 1'b1;
+                completed_n <= 1'b1;
             end
-        else
+        else if    (start_signal)
             begin
-                if    (start_flag)
-                    begin
-                        start_flag_reg <= 1'b1;
-                    end
-                else if    (read_finish)
-                    begin
-                        start_flag_reg <= 1'b0;
-                    end
-                else
-                    begin
-                        start_flag_reg <= start_flag_reg;
-                    end
+                PCH_SEL <= 1'b1;
+                BMC_SEL <= 1'b1;
+                SKT3_OE_CTL <= 1'b1;
+                busy_n <= 1'b0;
+            end
+        else if    (full)
+            begin
+                PCH_SEL <= 1'b0;
+                BMC_SEL <= 1'b0;
+                busy_n <= 1'b1;
+                completed_n <= 1'b0;
+            end
+        else if    (read_finish)
+            begin
+                PCH_SEL <= 1'b0;
+                BMC_SEL <= 1'b0;
+                SKT3_OE_CTL <= 1'b0;
+                busy_n <= 1'b1;
+                completed_n <= 1'b0;
             end
     end
-assign BMC_SEL = 1'b1;
-assign PCH_SEL = 1'b1;
-
-assign busy = read_finish? 1'b0 : 1'b1;
-assign completed = read_finish? 1'b1 : 1'b0;
 endmodule

@@ -14,20 +14,19 @@ module spi_flash_read(
     output reg    read_finish,          // Read finish signal output
     output    cs_n,
     output    spi_clk,
-    output reg    [15:0] rom_data_num,
-    output wire    [7:0] fifo_output
+    output reg    [31:0] rom_data_num,
+    output wire    [7:0] fifo_output,
+    output    full,
+    output    empty
 );
 
 //spi_flash_read <-> qspi_ctrl
 reg    sw;                    // Switch die signal
-//qspi_ctrl <-> ex_fifo_buffer
-reg    write_req2fifo;              // Write request signal
-
 
 reg    [31:0] curr_addr;
 reg    [31:0] curr_end_addr;
 wire    [7:0] data2spi_read;    // Data read from SPI flash
-wire    po_flag;               // FIFO write done signal
+wire    tx_flag;               // FIFO write done signal
 
 qspi_controller qspi_ctrl4read (
     .system_clk(system_clk),
@@ -45,7 +44,7 @@ qspi_controller qspi_ctrl4read (
     .io3(sfr2qspi_io3),
     .qspidata2spi_read(data2spi_read),
     .read_done(read_done),
-    .po_flag(po_flag)
+    .tx_flag(tx_flag)
 );
 
 fifo_buffer #(
@@ -54,10 +53,11 @@ fifo_buffer #(
 )  external_fifo (
     .system_clk(system_clk),
     .system_reset_n(system_reset_n),
-    .write_req(write_req2fifo),
+    .write_req(tx_flag),
     .fifo_dataIn(data2spi_read),
     .read_req(spi_read_req),
     .fifo_dataOut(fifo_output),
+    .enable(1'b1),
     .empty(empty),
     .full(full)
 );
@@ -72,7 +72,6 @@ always @ (posedge system_clk or negedge system_reset_n)
                 sw <= 1'b0;
                 curr_addr <= start_addr;
                 curr_end_addr <= end_addr;
-                write_req2fifo <= 1'b0;
             end
         else 
             begin
@@ -83,24 +82,10 @@ always @ (posedge system_clk or negedge system_reset_n)
                         curr_addr <= start_addr;
                         curr_end_addr <= end_addr;
                         rom_data_num <= end_addr - start_addr + 1;
-                        write_req2fifo <= 1'b0;
-                    end
-                if    (po_flag == 1'b1) 
-                    begin
-                        write_req2fifo <= 1'b1;
-                    end
-                if    (po_flag == 1'b0) 
-                    begin
-                        write_req2fifo <= 1'b0;
-                    end
-                if    (full) 
-                    begin
-                        write_req2fifo <= 1'b0;
                     end
                 if    (read_done)
                     begin
                         read_finish <= 1'b1;
-                        write_req2fifo <= 1'b0;
                     end
                 if    (curr_end_addr > 32'h01FFFFFF && switch_die_need) 
                     begin
@@ -115,7 +100,6 @@ always @ (posedge system_clk or negedge system_reset_n)
                                 curr_end_addr <= curr_end_addr - 32'h01FFFFFF;
                                 rom_data_num <= end_addr - 32'h01FFFFFF + 1;
                                 sw <= 1'b1;
-                                write_req2fifo <= 1'b1;
                             end
                     end
             end
